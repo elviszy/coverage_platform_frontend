@@ -27,6 +27,22 @@ export async function importConfluence(payload: {
   return resp.data
 }
 
+export async function importRequirementsText(payload: {
+  title: string
+  text: string
+  path?: string
+}): Promise<AcceptedJobResponse> {
+  const resp = await http.post('/requirements/import/text', payload)
+  return resp.data
+}
+
+export async function importRequirementsDocx(form: FormData): Promise<AcceptedJobResponse> {
+  const resp = await http.post('/requirements/import/docx', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return resp.data
+}
+
 export async function indexRequirements(payload: { scope: { page_ids?: string[] | null } }): Promise<AcceptedJobResponse> {
   const resp = await http.post('/requirements/index', payload)
   return resp.data

@@ -165,6 +165,12 @@ function splitCsv(v: string): string[] | undefined {
 }
 
 async function onSearch() {
+  // 必填项验证
+  if (!form.query_text.trim()) {
+    error.value = '请输入检索内容'
+    return
+  }
+  
   loading.value = true
   error.value = null
   try {

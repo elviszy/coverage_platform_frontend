@@ -11,6 +11,9 @@ import ReviewsListPage from '@/pages/ReviewsListPage.vue'
 import ReviewDetailPage from '@/pages/ReviewDetailPage.vue'
 import JobPage from '@/pages/JobPage.vue'
 import SettingsPage from '@/pages/SettingsPage.vue'
+import PublicCriteriaPage from '@/pages/PublicCriteriaPage.vue'
+import CoverageAnalyzePage from '@/pages/CoverageAnalyzePage.vue'
+import CoverageResultPage from '@/pages/CoverageResultPage.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -31,5 +34,10 @@ export const router = createRouter({
     { path: '/reviews/:runId', name: 'review-detail', component: ReviewDetailPage, props: true, meta: { title: '评审详情' } },
     { path: '/jobs', name: 'jobs', component: JobPage, meta: { title: '任务查询' } },
     { path: '/settings', name: 'settings', component: SettingsPage, meta: { title: '设置' } },
+    // 公共测试用例覆盖度分析
+    { path: '/public-criteria', name: 'public-criteria', component: PublicCriteriaPage, meta: { title: '公共测试标准' } },
+    { path: '/coverage/analyze', name: 'coverage-analyze', component: CoverageAnalyzePage, meta: { title: '覆盖度分析' } },
+    { path: '/coverage/:runId', name: 'coverage-result', component: CoverageResultPage, props: true, meta: { title: '分析结果' } },
   ],
 })
+

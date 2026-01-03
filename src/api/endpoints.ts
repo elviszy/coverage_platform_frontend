@@ -126,3 +126,83 @@ export async function updateSettings(payload: any): Promise<any> {
   const resp = await http.put('/settings/llm', payload)
   return resp.data
 }
+
+// ==================== 公共测试标准 API ====================
+
+export async function importPublicCriteria(payload: {
+  content: string
+  replace_all?: boolean
+}): Promise<{ imported: number; updated: number; skipped: number; errors: string[] }> {
+  const resp = await http.post('/public-criteria/import', payload)
+  return resp.data
+}
+
+export async function importPublicCriteriaFile(form: FormData): Promise<{
+  imported: number
+  updated: number
+  skipped: number
+  errors: string[]
+}> {
+  const resp = await http.post('/public-criteria/import-file', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return resp.data
+}
+
+export async function listPublicCriteria(params?: {
+  category?: string
+  search?: string
+  limit?: number
+  offset?: number
+}): Promise<{ items: any[]; total: number }> {
+  const resp = await http.get('/public-criteria/', { params })
+  return resp.data
+}
+
+export async function getPublicCriteriaCategories(): Promise<{ categories: string[] }> {
+  const resp = await http.get('/public-criteria/categories')
+  return resp.data
+}
+
+export async function indexPublicCriteria(force?: boolean): Promise<{
+  indexed: number
+  failed: number
+}> {
+  const resp = await http.post('/public-criteria/index', null, { params: { force: force || false } })
+  return resp.data
+}
+
+export async function deletePublicCriterion(criterionId: string): Promise<{ ok: boolean }> {
+  const resp = await http.delete(`/public-criteria/${criterionId}`)
+  return resp.data
+}
+
+// ==================== 覆盖度分析 API ====================
+
+export async function startCoverageAnalysis(payload: {
+  xmind_source_id: string
+  requirements_page_ids?: string[]
+  config?: any
+}): Promise<{ run_id: string; status: string }> {
+  const resp = await http.post('/coverage/analyze', payload)
+  return resp.data
+}
+
+export async function getCoverageResult(runId: string): Promise<any> {
+  const resp = await http.get(`/coverage/${runId}`)
+  return resp.data
+}
+
+export async function downloadCoverageReport(runId: string): Promise<string> {
+  const resp = await http.get(`/coverage/${runId}/report`)
+  return resp.data
+}
+
+export async function listCoverageRuns(params?: {
+  limit?: number
+  offset?: number
+}): Promise<{ items: any[]; total: number }> {
+  const resp = await http.get('/coverage/runs', { params })
+  return resp.data
+}
+

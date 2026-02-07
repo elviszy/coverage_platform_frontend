@@ -1,29 +1,52 @@
+/* Plus Jakarta Sans 字体 - ui-ux-pro-max 推荐 */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
 html,
 body {
   height: 100%;
 }
 
+/* 暗色模式 CSS 变量 */
 :root {
+  /* 主色调 - 保留紫色品牌色 */
   --el-color-primary: #6366f1;
   --el-color-primary-light-3: #818cf8;
   --el-color-primary-light-5: #a5b4fc;
   --el-color-primary-light-7: #c7d2fe;
   --el-color-primary-light-9: #e0e7ff;
   --el-color-primary-dark-2: #4f46e5;
+
+  /* CTA 绿色 - ui-ux-pro-max 推荐 */
+  --color-cta: #22C55E;
+  --color-cta-hover: #16A34A;
+  --color-cta-glow: rgba(34, 197, 94, 0.3);
+
+  /* 暗色背景色阶 */
+  --color-bg-primary: #020617;
+  --color-bg-secondary: #0F172A;
+  --color-bg-tertiary: #1E293B;
+  --color-bg-elevated: #334155;
+
+  /* 文字颜色 */
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #64748B;
+
+  /* 边框和分隔线 */
+  --color-border: rgba(148, 163, 184, 0.1);
+  --color-border-hover: rgba(148, 163, 184, 0.2);
+
+  /* 圆角和过渡 */
   --el-border-radius-base: 12px;
-  --el-fill-color-light: #f8fafc;
+  --el-fill-color-light: #1E293B;
   --app-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {
   margin: 0;
-  color: #1e293b;
-  background: 
-    radial-gradient(ellipse 1400px 700px at 0% 0%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse 1200px 600px at 100% 0%, rgba(14, 165, 233, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse 800px 400px at 50% 100%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -57,7 +80,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
+  background:
     radial-gradient(ellipse 300px 300px at 0% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 70%),
     radial-gradient(ellipse 200px 200px at 100% 100%, rgba(168, 85, 247, 0.1) 0%, transparent 70%);
   pointer-events: none;
@@ -145,8 +168,8 @@ body {
   gap: 16px;
   height: 64px;
   padding: 0 24px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-  background: rgba(255, 255, 255, 0.7);
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(15, 23, 42, 0.8);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -154,7 +177,7 @@ body {
 .app-title {
   font-weight: 700;
   font-size: 16px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   letter-spacing: -0.3px;
 }
 
@@ -174,40 +197,44 @@ body {
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-/* Card 样式 */
+/* Card 样式 - 暗色模式 */
 .el-card {
   border-radius: 16px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 
-    0 1px 3px rgba(15, 23, 42, 0.04),
-    0 6px 16px rgba(15, 23, 42, 0.04);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    0 6px 16px rgba(0, 0, 0, 0.2);
   transition: var(--app-transition);
   overflow: hidden;
 }
 
 .el-card:hover {
-  box-shadow: 
-    0 1px 3px rgba(15, 23, 42, 0.06),
-    0 12px 32px rgba(15, 23, 42, 0.08);
+  border-color: var(--color-border-hover);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    0 12px 32px rgba(0, 0, 0, 0.3);
 }
 
 .el-card__header {
   font-weight: 700;
   font-size: 15px;
-  color: #0f172a;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  color: var(--color-text-primary);
+  background: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-border);
   padding: 16px 20px;
 }
 
 .el-card__body {
   padding: 20px;
+  color: var(--color-text-secondary);
 }
 
 /* Button 样式 */
@@ -233,42 +260,76 @@ body {
   transform: translateY(0);
 }
 
-/* Table 样式 */
+/* CTA 绿色按钮 - ui-ux-pro-max 推荐 */
+.el-button--success,
+.btn-cta {
+  background: linear-gradient(135deg, var(--color-cta) 0%, var(--color-cta-hover) 100%) !important;
+  border: none !important;
+  box-shadow: 0 2px 8px var(--color-cta-glow);
+  color: #fff !important;
+}
+
+.el-button--success:hover,
+.btn-cta:hover {
+  background: linear-gradient(135deg, #34D399 0%, var(--color-cta) 100%) !important;
+  box-shadow: 0 4px 16px var(--color-cta-glow);
+  transform: translateY(-1px);
+}
+
+/* Table 样式 - 暗色模式 */
 .el-table {
   border-radius: 12px;
   overflow: hidden;
-  --el-table-header-bg-color: #f8fafc;
-  --el-table-row-hover-bg-color: #f1f5f9;
+  --el-table-bg-color: var(--color-bg-secondary);
+  --el-table-header-bg-color: var(--color-bg-tertiary);
+  --el-table-row-hover-bg-color: var(--color-bg-tertiary);
+  --el-table-border-color: var(--color-border);
+  --el-table-text-color: var(--color-text-secondary);
 }
 
 .el-table th.el-table__cell {
   font-weight: 600;
-  color: #475569;
+  color: var(--color-text-muted);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  background: var(--color-bg-tertiary) !important;
 }
 
 .el-table td.el-table__cell {
-  color: #334155;
+  color: var(--color-text-secondary);
+  border-bottom-color: var(--color-border) !important;
 }
 
-/* Input 样式 */
+/* Input 样式 - 暗色模式 */
 .el-input__wrapper {
   border-radius: 10px !important;
+  background: var(--color-bg-tertiary) !important;
+  box-shadow: 0 0 0 1px var(--color-border) inset !important;
   transition: var(--app-transition);
 }
 
 .el-input__wrapper:hover {
-  box-shadow: 0 0 0 1px var(--el-color-primary-light-5) inset;
+  box-shadow: 0 0 0 1px var(--color-border-hover) inset !important;
 }
 
 .el-input__wrapper.is-focus {
-  box-shadow: 0 0 0 1px var(--el-color-primary) inset, 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset, 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+}
+
+.el-input__inner {
+  color: var(--color-text-primary) !important;
+}
+
+.el-input__inner::placeholder {
+  color: var(--color-text-muted) !important;
 }
 
 .el-textarea__inner {
   border-radius: 10px !important;
+  background: var(--color-bg-tertiary) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border) !important;
 }
 
 /* Tabs 样式 */
@@ -286,15 +347,15 @@ body {
   border-radius: 3px;
 }
 
-/* Progress 样式 */
+/* Progress 样式 - 暗色模式 */
 .el-progress-bar__outer {
   border-radius: 10px;
-  background: #e2e8f0;
+  background: var(--color-bg-tertiary);
 }
 
 .el-progress-bar__inner {
   border-radius: 10px;
-  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(90deg, var(--color-cta) 0%, #34D399 100%);
 }
 
 /* Alert 样式 */
@@ -317,20 +378,20 @@ body {
   font-weight: 500;
 }
 
-/* Code 样式 */
+/* Code 样式 - 暗色模式 */
 code {
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  background: var(--color-bg-tertiary);
   padding: 3px 8px;
   border-radius: 6px;
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
-  color: #6366f1;
+  color: var(--color-cta);
   font-weight: 500;
 }
 
 pre {
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   padding: 16px;
   border-radius: 12px;
   overflow: auto;
@@ -349,10 +410,10 @@ pre {
   background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
 }
 
-/* Divider 样式 */
+/* Divider 样式 - 暗色模式 */
 .el-divider__text {
-  background: transparent;
-  color: #64748b;
+  background: var(--color-bg-primary);
+  color: var(--color-text-muted);
   font-weight: 600;
   font-size: 12px;
   text-transform: uppercase;
@@ -367,13 +428,14 @@ pre {
 
 .el-upload-dragger {
   border-radius: 12px;
-  border: 2px dashed #cbd5e1;
+  border: 2px dashed var(--color-border-hover);
+  background: var(--color-bg-secondary);
   transition: var(--app-transition);
 }
 
 .el-upload-dragger:hover {
   border-color: var(--el-color-primary);
-  background: rgba(99, 102, 241, 0.02);
+  background: rgba(99, 102, 241, 0.05);
 }
 
 /* Switch 样式 */
@@ -382,7 +444,7 @@ pre {
   border-color: transparent;
 }
 
-/* 自定义工具类 */
+/* 自定义工具类 - 暗色模式 */
 .page-header {
   margin-bottom: 24px;
 }
@@ -390,14 +452,14 @@ pre {
 .page-header-title {
   font-size: 24px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text-primary);
   margin: 0 0 8px;
   letter-spacing: -0.5px;
 }
 
 .page-header-desc {
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-text-muted);
   margin: 0;
 }
 
@@ -409,10 +471,10 @@ pre {
 .stat-value {
   font-size: 32px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--color-text-primary);
   line-height: 1;
   margin-bottom: 8px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, var(--color-cta) 0%, #34D399 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -477,8 +539,13 @@ pre {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .slide-up {
@@ -490,6 +557,7 @@ pre {
     opacity: 0;
     transform: translateY(16px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -501,4 +569,69 @@ pre {
   .app-main-inner {
     max-width: 100%;
   }
+}
+
+/* Element Plus 弹出层深色样式 */
+.el-select-dropdown,
+.el-popper {
+  background: var(--color-bg-tertiary) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+}
+
+.el-select-dropdown__item {
+  color: var(--color-text-secondary) !important;
+}
+
+.el-select-dropdown__item:hover {
+  background: var(--color-bg-elevated) !important;
+}
+
+.el-select-dropdown__item.selected,
+.el-select-dropdown__item.is-selected {
+  color: var(--color-cta) !important;
+  font-weight: 600;
+}
+
+.el-select-dropdown__item.hover {
+  background: var(--color-bg-elevated) !important;
+}
+
+/* Collapse 深色样式 */
+.el-collapse {
+  border: none;
+  --el-collapse-header-bg-color: transparent;
+  --el-collapse-content-bg-color: transparent;
+}
+
+.el-collapse-item__header {
+  background: transparent !important;
+  border: none !important;
+  color: var(--color-text-secondary) !important;
+}
+
+.el-collapse-item__wrap {
+  border: none !important;
+  background: transparent !important;
+}
+
+.el-collapse-item__content {
+  color: var(--color-text-secondary) !important;
+}
+
+/* InputNumber 深色样式 */
+.el-input-number {
+  --el-input-number-bg-color: var(--color-bg-tertiary);
+}
+
+.el-input-number__decrease,
+.el-input-number__increase {
+  background: var(--color-bg-elevated) !important;
+  color: var(--color-text-secondary) !important;
+  border-color: var(--color-border) !important;
+}
+
+.el-input-number__decrease:hover,
+.el-input-number__increase:hover {
+  color: var(--color-cta) !important;
 }

@@ -89,6 +89,9 @@
       </div>
 
       <div class="form-actions">
+        <el-checkbox v-model="useStreamMode" style="margin-right: 16px">
+          🌊 流式分析模式（实时显示智能体进度）
+        </el-checkbox>
         <el-button type="primary" size="large" :loading="analyzing" :disabled="!form.xmind_source_id" @click="onAnalyze">
           🚀 开始分析
         </el-button>
@@ -102,6 +105,25 @@
         <el-tag :type="statusTagType">{{ statusText }}</el-tag>
       </div>
       <el-progress :percentage="progressPercent" :status="progressStatus" />
+      
+      <!-- 流式消息列表 -->
+      <div v-if="streamMessages.length > 0" class="stream-messages">
+        <div class="messages-header">
+          <span>🤖 智能体消息</span>
+          <el-button text size="small" @click="streamMessages = []">清空</el-button>
+        </div>
+        <div class="messages-list" ref="messagesListRef">
+          <div 
+            v-for="(msg, index) in streamMessages" 
+            :key="index" 
+            :class="['message-item', `message-${msg.event}`]"
+          >
+            <span class="message-time">{{ formatTime(msg.time) }}</span>
+            <span class="message-content">{{ msg.message }}</span>
+          </div>
+        </div>
+      </div>
+      
       <div class="progress-actions" v-if="currentRun.status === 'completed'">
         <el-button type="primary" @click="viewResult">
           查看详细结果 →
@@ -161,7 +183,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
-import { startCoverageAnalysis, getCoverageResult, listCoverageRuns } from '@/api/endpoints'
+import { startCoverageAnalysis, getCoverageResult, listCoverageRuns, startStreamingAnalysis } from '@/api/endpoints'
 import { http } from '@/api/http'
 
 const router = useRouter()
@@ -189,6 +211,10 @@ const loadingRequirements = ref(false)
 const analyzing = ref(false)
 const currentRun = ref<any>(null)
 const pollingTimer = ref<number | null>(null)
+const useStreamMode = ref(true) // 默认使用流式模式
+const streamMessages = ref<{ event: string; message: string; time: Date }[]>([])
+const streamController = ref<{ close: () => void } | null>(null)
+const messagesListRef = ref<HTMLElement | null>(null)
 
 // 历史记录
 const history = ref<any[]>([])
@@ -273,6 +299,81 @@ async function loadHistory() {
 // 开始分析
 async function onAnalyze() {
   analyzing.value = true
+  streamMessages.value = []
+  
+  if (useStreamMode.value) {
+    // 流式分析模式
+    await onStreamAnalyze()
+  } else {
+    // 传统轮询模式
+    await onPollingAnalyze()
+  }
+}
+
+// 流式分析
+async function onStreamAnalyze() {
+  currentRun.value = { run_id: '', status: 'running' }
+  
+  try {
+    streamController.value = startStreamingAnalysis(
+      {
+        xmind_source_id: form.xmind_source_id,
+        requirements_page_ids: form.requirements_page_ids.length ? form.requirements_page_ids : undefined,
+        config: form.config,
+      },
+      {
+        onStart: (data) => {
+          currentRun.value = { run_id: data.run_id, status: 'running' }
+          addStreamMessage('start', data.message || '开始分析...')
+        },
+        onProgress: (data) => {
+          if (data.progress) {
+            currentRun.value = { ...currentRun.value, progress: data.progress }
+          }
+          addStreamMessage('progress', data.message || `进度: ${data.progress}%`)
+        },
+        onMessage: (data) => {
+          addStreamMessage('message', data.message || data.source || '...')
+        },
+        onComplete: (data) => {
+          currentRun.value = { run_id: data.run_id, status: 'completed', summary: data.summary }
+          addStreamMessage('complete', '✅ 分析完成')
+          ElMessage.success('分析完成！')
+          loadHistory()
+          analyzing.value = false
+        },
+        onError: (error) => {
+          currentRun.value = { ...currentRun.value, status: 'failed' }
+          addStreamMessage('error', `❌ ${error}`)
+          ElMessage.error('分析失败: ' + error)
+          analyzing.value = false
+        },
+      }
+    )
+  } catch (e: any) {
+    ElMessage.error('分析失败: ' + (e.message || e))
+    analyzing.value = false
+  }
+}
+
+// 添加流式消息
+function addStreamMessage(event: string, message: string) {
+  streamMessages.value.push({ event, message, time: new Date() })
+  // 自动滚动到底部
+  setTimeout(() => {
+    if (messagesListRef.value) {
+      messagesListRef.value.scrollTop = messagesListRef.value.scrollHeight
+    }
+  }, 50)
+}
+
+// 格式化时间
+function formatTime(date: Date) {
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+// 传统轮询分析
+async function onPollingAnalyze() {
   try {
     const res = await startCoverageAnalysis({
       xmind_source_id: form.xmind_source_id,
@@ -457,5 +558,73 @@ onMounted(() => {
 .coverage-low {
   color: #f56c6c;
   font-weight: 600;
+}
+
+/* 流式消息列表样式 */
+.stream-messages {
+  margin-top: 16px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.messages-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e4e7ed;
+  font-weight: 500;
+}
+
+.messages-list {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.message-item {
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.message-item:hover {
+  background: #f0f0f0;
+}
+
+.message-time {
+  color: #999;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.message-content {
+  flex: 1;
+  word-break: break-word;
+}
+
+.message-start {
+  background: #e6f7ff;
+  border-left: 3px solid #1890ff;
+}
+
+.message-progress {
+  background: #fffbe6;
+  border-left: 3px solid #faad14;
+}
+
+.message-complete {
+  background: #f6ffed;
+  border-left: 3px solid #52c41a;
+}
+
+.message-error {
+  background: #fff1f0;
+  border-left: 3px solid #f5222d;
 }
 </style>

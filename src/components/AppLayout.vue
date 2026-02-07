@@ -40,14 +40,10 @@
             <span>用例检索</span>
           </el-menu-item>
 
-          <div class="menu-group-title">覆盖度分析</div>
+          <div class="menu-group-title">公共测试标准</div>
           <el-menu-item index="/public-criteria">
             <span class="menu-icon">📑</span>
-            <span>公共测试标准</span>
-          </el-menu-item>
-          <el-menu-item index="/coverage/analyze">
-            <span class="menu-icon">📊</span>
-            <span>发起分析</span>
+            <span>标准管理</span>
           </el-menu-item>
 
           <div class="menu-group-title">评审中心</div>

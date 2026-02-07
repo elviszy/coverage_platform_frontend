@@ -65,6 +65,24 @@ export async function searchTests(payload: any): Promise<TestsSearchResponse> {
   return resp.data
 }
 
+// 获取需求页面列表
+export async function listRequirementsPages(): Promise<{
+  items: Array<{ page_id: string; page_url: string; title: string; version: number; path: string; fetched_at: string }>
+  total: number
+}> {
+  const resp = await http.get('/requirements/pages')
+  return resp.data
+}
+
+// 获取用例来源列表
+export async function listTestsSources(): Promise<{
+  items: Array<{ source_id: string; source_type: string; file_name: string; file_hash: string; imported_at: string }>
+  total: number
+}> {
+  const resp = await http.get('/tests/sources')
+  return resp.data
+}
+
 export async function listReviewRuns(page = 1, pageSize = 20): Promise<ReviewRunListResponse> {
   const resp = await http.get('/reviews/runs', { params: { page, page_size: pageSize } })
   return resp.data
@@ -77,6 +95,49 @@ export async function createReviewRun(payload: any): Promise<AcceptedJobResponse
 
 export async function getReviewSummary(runId: string): Promise<ReviewSummaryResponse> {
   const resp = await http.get(`/reviews/runs/${runId}/summary`)
+  return resp.data
+}
+
+// 获取功能点覆盖详情
+export async function getFeatureCoverage(runId: string): Promise<{
+  summary: { total: number; covered: number; partial: number; missed: number }
+  items: Array<{
+    page_id: string
+    path: string
+    total: number
+    covered: number
+    partial: number
+    missed: number
+    coverage_rate: number
+    status: 'covered' | 'partial' | 'missed'
+  }>
+}> {
+  const resp = await http.get(`/reviews/runs/${runId}/feature-coverage`)
+  return resp.data
+}
+
+// 获取公共用例标准覆盖详情
+export async function getPublicCriteriaCoverage(runId: string): Promise<{
+  summary: {
+    total: number
+    covered: number
+    partial: number
+    missed: number
+    by_category: Array<{ category: string; total: number; covered: number; partial: number; missed: number }>
+  }
+  covered: Array<{
+    criterion_id: string
+    category: string
+    test_point: string
+    test_content: string
+    status: string
+    score: number
+    matched_scenario: any
+  }>
+  partial: Array<any>
+  missed: Array<any>
+}> {
+  const resp = await http.get(`/reviews/runs/${runId}/public-criteria-coverage`)
   return resp.data
 }
 
@@ -206,3 +267,8 @@ export async function listCoverageRuns(params?: {
   return resp.data
 }
 
+// ==================== 流式分析 API ====================
+
+// 导出流式分析服务
+export { startStreamingAnalysis, useStreamingAnalysis } from './streaming'
+export type { SSEEvent, SSECallbacks } from './streaming'

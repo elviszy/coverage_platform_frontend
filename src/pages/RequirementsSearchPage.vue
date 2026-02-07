@@ -3,11 +3,17 @@
     <!-- 页面头 -->
     <div class="page-header">
       <h1 class="page-title">🎯 需求检索</h1>
-      <p class="page-desc">基于向量相似度检索验收标准</p>
+      <p class="page-desc">基于向量相似度检索验收标准，或使用智能问答获取需求信息</p>
     </div>
 
-    <!-- 检索表单 -->
-    <el-card class="search-card">
+    <!-- 模式切换 -->
+    <el-tabs v-model="activeTab" class="mode-tabs" @tab-change="onTabChange">
+      <el-tab-pane label="📝 列表检索" name="search" />
+      <el-tab-pane label="🤖 智能问答" name="chat" />
+    </el-tabs>
+
+    <!-- 检索表单 - 只在"列表检索"标签激活时显示 -->
+    <el-card v-show="activeTab === 'search'" class="search-card">
       <div class="search-form">
         <div class="form-main">
           <div class="form-group">
@@ -56,8 +62,67 @@
       <el-alert v-if="error" type="error" :title="error" show-icon style="margin-top: 16px" />
     </el-card>
 
+    <!-- 智能问答组件 -->
+    <el-card v-show="activeTab === 'chat'" class="chat-card">
+      <div class="chat-container">
+        <!-- 问答历史 -->
+        <div class="chat-history" ref="chatHistoryRef">
+          <div v-if="chatMessages.length === 0" class="chat-empty">
+            <div class="empty-icon">🤖</div>
+            <p>输入问题，智能体将基于需求知识库回答</p>
+            <p class="empty-hint">例如：“订单取消的验收标准是什么？”</p>
+          </div>
+          
+          <div v-for="(msg, index) in chatMessages" :key="index" :class="['chat-message', `chat-${msg.role}`]">
+            <div class="message-avatar">
+              {{ msg.role === 'user' ? '👤' : '🤖' }}
+            </div>
+            <div class="message-content">
+              <div class="message-text" v-html="msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content"></div>
+              <!-- 来源引用 - 按页面去重 -->
+              <div v-if="msg.sources && msg.sources.length > 0" class="message-sources">
+                <div class="sources-header">📚 引用来源</div>
+                <div v-for="(src, i) in deduplicateSources(msg.sources)" :key="i" class="source-item">
+                  <span class="source-path">{{ src.path }}</span>
+                  <span class="source-score">{{ (src.score * 100).toFixed(0) }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 加载中 -->
+          <div v-if="chatLoading" class="chat-message chat-assistant">
+            <div class="message-avatar">🤖</div>
+            <div class="message-content">
+              <div class="loading-dots">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 输入区 -->
+        <div class="chat-input-area">
+          <el-input
+            v-model="chatQuery"
+            placeholder="输入您的问题..."
+            size="large"
+            :disabled="chatLoading"
+            @keyup.enter="onChatSubmit"
+          >
+            <template #prefix>
+              <span>💬</span>
+            </template>
+          </el-input>
+          <el-button type="primary" size="large" :loading="chatLoading" :disabled="!chatQuery.trim()" @click="onChatSubmit">
+            发送
+          </el-button>
+        </div>
+      </div>
+    </el-card>
+
     <!-- 结果列表 - 卡片式展示 -->
-    <div class="result-section">
+    <div v-show="activeTab === 'search'" class="result-section">
       <div class="result-header">
         <div class="result-title">
           <span class="result-icon">📝</span>
@@ -142,7 +207,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { searchRequirements } from '@/api/endpoints'
@@ -152,6 +217,10 @@ import { useAppStore } from '@/stores/app'
 const router = useRouter()
 const app = useAppStore()
 
+// Tab 切换
+const activeTab = ref('search')
+
+// 检索表单
 const form = reactive({
   query_text: '',
   top_k: 20,
@@ -217,17 +286,45 @@ function openUrl(url: string) {
 function renderMarkdown(md: string): string {
   if (!md) return ''
   
-  return md
-    // 转义 HTML 特殊字符
+  // 先处理特殊情况：保留代码块中的内容
+  const codeBlocks: string[] = []
+  let processed = md.replace(/`([^`]+)`/g, (_, code) => {
+    codeBlocks.push(code)
+    return `__CODE_BLOCK_${codeBlocks.length - 1}__`
+  })
+  
+  // HTML 转义（但保留 > 用于 blockquote）
+  processed = processed
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+  
+  // Markdown 渲染
+  processed = processed
     // ### 标题
-    .replace(/^### (\d+)\. (.+)$/gm, '<h4 class="md-h4"><span class="md-num">$1</span> $2</h4>')
+    .replace(/^### (.+)$/gm, '<h3 class="md-h3">$1</h3>')
+    // ## 标题
+    .replace(/^## (.+)$/gm, '<h2 class="md-h2">$1</h2>')
     // **粗体**
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // > 引用块
+    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+    // - 列表项
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    // 将连续的 <li> 包装成 <ul>
+    .replace(/(<li>.*<\/li>\n?)+/g, '<ul class="md-list">$&</ul>')
     // 换行
     .replace(/\n/g, '<br>')
+    // 清理多余的 <br> 在 block 元素后
+    .replace(/<\/h[23]><br>/g, '</h$1>')
+    .replace(/<\/blockquote><br>/g, '</blockquote>')
+    .replace(/<\/ul><br>/g, '</ul>')
+  
+  // 恢复代码块
+  codeBlocks.forEach((code, i) => {
+    processed = processed.replace(`__CODE_BLOCK_${i}__`, `<code>${code.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</code>`)
+  })
+  
+  return `<div class="markdown-content">${processed}</div>`
 }
 
 function splitCsv(v: string): string[] | undefined {
@@ -236,6 +333,24 @@ function splitCsv(v: string): string[] | undefined {
     .map((s) => s.trim())
     .filter(Boolean)
   return xs.length ? xs : undefined
+}
+
+// 对引用来源按页面路径去重，每个页面只保留得分最高的一条
+function deduplicateSources(sources: ChatMessage['sources']): ChatMessage['sources'] {
+  if (!sources || sources.length === 0) return sources
+  
+  // 按 path 分组，保留每组中 score 最高的
+  const pathMap = new Map<string, typeof sources[0]>()
+  
+  for (const src of sources) {
+    const existing = pathMap.get(src.path)
+    if (!existing || src.score > existing.score) {
+      pathMap.set(src.path, src)
+    }
+  }
+  
+  // 按 score 降序排列返回
+  return Array.from(pathMap.values()).sort((a, b) => b.score - a.score)
 }
 
 async function onSearch() {
@@ -290,6 +405,153 @@ function useSelectedAsScope() {
     },
   })
   router.push('/reviews/create')
+}
+
+// ==================== 智能问答 ====================
+
+interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+  sources?: { path: string; table_title?: string; score: number }[]
+}
+
+const chatQuery = ref('')
+const chatMessages = ref<ChatMessage[]>([])
+const chatLoading = ref(false)
+const chatHistoryRef = ref<HTMLElement | null>(null)
+
+function onTabChange(tab: string) {
+  // 切换时可以做一些清理
+}
+
+async function onChatSubmit() {
+  if (!chatQuery.value.trim() || chatLoading.value) return
+  
+  const query = chatQuery.value.trim()
+  chatQuery.value = ''
+  
+  // 添加用户消息
+  chatMessages.value.push({
+    role: 'user',
+    content: query,
+  })
+  
+  // 滚动到底部
+  scrollToBottom()
+  
+  chatLoading.value = true
+  
+  try {
+    // 使用 SSE 流式接口
+    const API_BASE_URL = '/api/v1'
+    const response = await fetch(`${API_BASE_URL}/requirements/chat/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: query,
+        top_k: 10,
+      }),
+    })
+    
+    if (!response.ok) {
+      throw new Error('请求失败')
+    }
+    
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('无法获取响应流')
+    }
+    
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let fullAnswer = ''
+    let sources: ChatMessage['sources'] = []
+    
+    // 添加助手消息占位
+    chatMessages.value.push({
+      role: 'assistant',
+      content: '',
+    })
+    const msgIndex = chatMessages.value.length - 1
+    
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      
+      buffer += decoder.decode(value, { stream: true })
+      
+      // 兼容 CRLF 和 LF：将 \r\n 统一转换为 \n
+      buffer = buffer.replace(/\r\n/g, '\n')
+      
+      // 解析 SSE 事件
+      const events = buffer.split('\n\n')
+      buffer = events.pop() || ''
+      
+      for (const eventStr of events) {
+        if (!eventStr.trim()) continue
+        
+        const lines = eventStr.split('\n')
+        let eventType = 'message'
+        let eventData = ''
+        
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            eventType = line.slice(6).trim()
+          } else if (line.startsWith('data:')) {
+            eventData = line.slice(5).trim()
+          }
+        }
+        
+        if (eventData) {
+          try {
+            const data = JSON.parse(eventData)
+            
+            if (eventType === 'message') {
+              // 收到首个消息时，关闭加载状态以显示内容
+              if (chatLoading.value) {
+                chatLoading.value = false
+              }
+              fullAnswer += data.content || ''
+              // 使用 splice 替换确保 Vue 响应式触发
+              chatMessages.value.splice(msgIndex, 1, {
+                ...chatMessages.value[msgIndex],
+                content: fullAnswer,
+              })
+              scrollToBottom()
+            } else if (eventType === 'complete') {
+              fullAnswer = data.answer || fullAnswer
+              sources = data.sources || []
+              // 使用 splice 替换确保 Vue 响应式触发
+              chatMessages.value.splice(msgIndex, 1, {
+                ...chatMessages.value[msgIndex],
+                content: fullAnswer,
+                sources: sources,
+              })
+            }
+          } catch (e) {
+            console.warn('SSE 解析失败:', eventData)
+          }
+        }
+      }
+    }
+    
+  } catch (e: any) {
+    chatMessages.value.push({
+      role: 'assistant',
+      content: `抱歉，发生错误：${e.message || '未知错误'}`,
+    })
+  } finally {
+    chatLoading.value = false
+    scrollToBottom()
+  }
+}
+
+function scrollToBottom() {
+  nextTick(() => {
+    if (chatHistoryRef.value) {
+      chatHistoryRef.value.scrollTop = chatHistoryRef.value.scrollHeight
+    }
+  })
 }
 </script>
 
@@ -645,5 +907,246 @@ function useSelectedAsScope() {
   border-radius: 4px;
   margin-top: 4px;
   border-left: 2px solid #cbd5e1;
+}
+
+/* ==================== 智能问答样式 ==================== */
+
+.mode-tabs {
+  margin-bottom: 20px;
+}
+
+.chat-card {
+  margin-bottom: 20px;
+  /* 覆盖 Element Plus 默认白色背景 */
+  --el-card-bg-color: transparent !important;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(30, 41, 59, 0.6) 100%) !important;
+  border: 1px solid rgba(99, 102, 241, 0.2) !important;
+  backdrop-filter: blur(8px);
+}
+
+.chat-card :deep(.el-card__body) {
+  background: transparent !important;
+}
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 500px;
+}
+
+.chat-history {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  /* 深色渐变背景，与平台整体风格一致 */
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.chat-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.chat-empty .empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  filter: brightness(0.8);
+}
+
+.chat-empty .empty-hint {
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.6);
+}
+
+.chat-message {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.chat-user {
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.chat-user .message-avatar {
+  background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+  border: 1px solid rgba(129, 140, 248, 0.5);
+}
+
+.message-content {
+  max-width: 80%;
+  /* AI 回复使用半透明深色背景 */
+  background: rgba(51, 65, 85, 0.8);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  color: #e2e8f0;
+}
+
+.chat-user .message-content {
+  /* 用户消息使用渐变紫色 */
+  background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+  color: #fff;
+  border: 1px solid rgba(129, 140, 248, 0.3);
+}
+
+.message-text {
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+/* 智能问答区域的 Markdown 深色主题样式 */
+.chat-assistant .message-text .markdown-content {
+  background: transparent !important;
+  color: #e2e8f0 !important;
+  padding: 0 !important;
+}
+
+.chat-assistant .message-text .markdown-content :deep(h3) {
+  color: #a5b4fc !important;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.chat-assistant .message-text .markdown-content :deep(ul) {
+  padding-left: 0;
+  margin: 8px 0;
+}
+
+.chat-assistant .message-text .markdown-content :deep(li) {
+  color: #cbd5e1;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 6px;
+  border-left: 3px solid rgba(99, 102, 241, 0.5);
+}
+
+.chat-assistant .message-text .markdown-content :deep(strong) {
+  color: #818cf8 !important;
+}
+
+.chat-assistant .message-text .markdown-content :deep(code) {
+  background: rgba(99, 102, 241, 0.15) !important;
+  color: #a5b4fc !important;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.chat-assistant .message-text .markdown-content :deep(blockquote),
+.chat-assistant .message-text .markdown-content :deep(em) {
+  background: rgba(15, 23, 42, 0.6) !important;
+  color: #94a3b8 !important;
+  border-left-color: rgba(99, 102, 241, 0.4) !important;
+}
+
+.chat-assistant .message-text .markdown-content :deep(> ul > li) {
+  border-bottom-color: rgba(99, 102, 241, 0.2);
+}
+
+.message-sources {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.sources-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(148, 163, 184, 0.9);
+  margin-bottom: 8px;
+}
+
+.source-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 6px 10px;
+  /* 来源卡片使用深色背景 */
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 6px;
+  margin-bottom: 4px;
+  border: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.source-path {
+  color: rgba(203, 213, 225, 0.9);
+  flex: 1;
+}
+
+.source-table {
+  color: #a5b4fc;
+  font-weight: 500;
+}
+
+.source-score {
+  color: #4ade80;
+  font-weight: 600;
+  background: rgba(34, 197, 94, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.chat-input-area {
+  display: flex;
+  gap: 12px;
+}
+
+.chat-input-area .el-input {
+  flex: 1;
+}
+
+/* 加载动画 */
+.loading-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.loading-dots span {
+  width: 8px;
+  height: 8px;
+  background: #94a3b8;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
 }
 </style>
